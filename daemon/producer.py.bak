@@ -1,0 +1,164 @@
+#!/usr/bin/python
+# The producer class which populates the producer database
+
+import threading
+import random
+import time
+from datetime import datetime
+from datetime import date
+from datetime import timedelta
+from time import sleep
+from db import *
+
+#curstatus understanding
+# 1: Queued to play
+# 0: Playing
+# -1: Played, remove and archive
+#Type for a tune
+# 0: Its a song
+# 1: Its a promo
+
+class SongPicker ( threading.Thread ):
+
+    def run ( self ):
+        cursor.execute("SELECT COUNT(*) FROM producer where curstatus = 1")
+        row = cursor.fetchone()
+        if row:
+            i = 4 - row["COUNT(*)"]
+        else:
+            i =4
+            
+        count =0
+        for j in range(0,i):
+            showid = self.schedule_is_show()
+            if (showid):
+                self.preload_show(showid)
+                break
+            else:
+                count = count +1
+                if count%3:
+                    self.pick_song()
+                else:
+                    self.pick_promo()                    
+
+
+    def schedule_is_show(self):
+        #ToDo: Make it IST and not UTC
+        #http://docs.python.org/lib/module-time.html: for time tuple information
+
+        now = time.localtime(time.time())
+        hour =  now[3]
+        
+        cursor.execute("SELECT * FROM actualsched where starttime = %s",hour+1)
+        result_set = cursor.fetchall()
+        for row in result_set:
+            starttime = row['starttime']
+            showid = row['showid']
+            if self.show_ten_minutes(starttime):
+                print 'Show found'
+                print showid
+                return showid
+        print 'No show mate'
+        return 0
+
+
+    def show_ten_minutes(self,starttime):
+        now = time.localtime(time.time())
+        hour =  now[3]
+        minute =  now[4]
+        
+        new_hour = hour + (minute+10)/60
+        if new_hour == hour + 1:
+            return 1
+        return 0
+
+    def preload_show(self,showid):
+        self.fill_time_lag()
+        cursor.execute("SELECT * FROM tunes where showid = %s order by pos",showid)
+        result_set = cursor.fetchall()
+        for row in result_set:
+            print 'Preload Show with showid'
+            print showid
+            tuneid = row['ID']
+            curstatus = 1
+            cursor.execute("INSERT into producer (tuneid,showid,curstatus) values (%s,%s,%s)",(tuneid,showid,curstatus))
+        return 1
+
+    def fill_time_lag(self):
+        now = time.localtime(time.time())
+        hour =  now[3]
+        minute =  now[4]
+
+        num_min = 60 - minute
+
+        left_time = 0
+        while time< num_min:
+            left_time = left_time + self.pick_song(num_min - left_time)
+            left_time = left_time + self.pick_song(num_min - left_time)
+            left_time = left_time + self.promo_song(num_min - left_time)
+
+    def pick_song(self,max_time=100):
+        '''For now this is random, need to make this match tags'''
+        # The maximum length of the song is assumed to be 100 because every song will be less than 100 minutes
+        cursor.execute("SELECT ID,time FROM tunes where showid=-1 and time < %s and type = 0",max_time)
+        if cursor.rowcount!=0:
+            guess = random.randrange(cursor.rowcount)
+            print 'The guess number this time is'
+            print guess
+            result_set = cursor.fetchall()
+            i=0
+            for row in result_set:        
+                if i==guess:
+                    print 'Insert into producer song at random'
+                    print row['ID'],-1
+                    cursor.execute("INSERT into producer (tuneid,showid,curstatus) values (%s,%s,%s)",(row['ID'],-1,1))
+                    now = datetime.now()
+                    print now
+                    cursor.execute ("update tunes set lastplayed=%s where ID=%s",(now,row['ID']))
+                    break
+                i = i+1
+            if i == 0:
+                return 0
+            else:
+                # if there is no song less than the required length, just send back the time. So that show can be started.
+                # In a long run, we need to pick promo's here.
+                return row['time']
+        else:
+            print 'Song database empty....'
+
+    def pick_promo(self,max_time=100):
+        '''Pick a random promo'''        
+        cursor.execute("SELECT ID FROM tunes where type=1")
+        if cursor.rowcount !=0:
+            guess = random.randrange(cursor.rowcount)
+            result_set = cursor.fetchall()
+            i=0
+            for row in result_set:        
+                if i==guess:
+                    print 'Insert into producer promo at random'
+                    print row['ID'],-1
+                    cursor.execute("INSERT into producer (tuneid,showid,curstatus) values (%s,%s,%s)",(row['ID'],-1,1))
+                    break
+                i = i+1
+        else:
+            print 'Promo database empty...'
+                
+class Producer ( threading.Thread ):
+
+   def run ( self ):
+
+      print 'Producer starting up...'
+      while 1:
+          cursor.execute("SELECT COUNT(*) FROM producer where curstatus = 1")
+          row = cursor.fetchone()
+          if row:
+              if row["COUNT(*)"] < 4:          
+                  song_picker1 = SongPicker()
+                  song_picker1.start()
+                  song_picker1.join()
+          else:
+                  song_picker1 = SongPicker()
+                  song_picker1.start()
+                  song_picker1.join()
+          sleep(60)
+          
