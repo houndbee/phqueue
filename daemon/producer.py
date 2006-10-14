@@ -105,13 +105,16 @@ class SongPicker ( threading.Thread ):
         left_time = 0
 	i=0
 	print 'Filling time lag...'
-	print num_min
+        print num_sec
+        
         while left_time< num_sec:
 		if i%3:
 	            left_time = left_time + self.pick_song(num_sec - left_time)
 		else:			
 	            left_time = left_time + self.pick_promo(num_sec - left_time)
-		print left_time
+                i = i + 1
+                print 'Time left is...'
+		print left_time - num_min
 
     def pick_song(self,max_time=10000):
         '''For now this is random, need to make this match tags'''
@@ -132,11 +135,17 @@ class SongPicker ( threading.Thread ):
             now = datetime.now()
             cursor.execute("INSERT into producer (tuneid,showid,curstatus) values (%s,%s,%s)",(row1['ID'],-1,1))
             cursor.execute ("update tunes set lastplayed=%s where ID=%s",(now,row1['ID']))
+            print 'Song selected is...'
+            print row1["time"]
             return row1["time"]
         else:
             print 'Fuck shit,we a need panic song and a mail that shreyas sucks at designing algorithms'
-	    return max_time
-	    
+            # This is not necessary but somehow the select seems to fail sometimes!! weird shit
+            if max_time < 30:
+                return max_time
+            else:
+                return 0
+            
 # FASTER IMPLEMENTATION OF pick_random_tune does not work very well :(
 #    def pick_random_tune(self,type,max_time):
 #        cursor.execute("SELECT MAX(`id`) AS max_id , MIN(`id`) AS min_id FROM `tunes` ");
@@ -168,6 +177,7 @@ class Producer ( threading.Thread ):
    def run ( self ):
 
       print 'Producer starting up...'
+      self.purge_producer()
       while 1:
           cursor.execute("SELECT COUNT(*) FROM producer where curstatus = 1")
           row = cursor.fetchone()
@@ -181,4 +191,6 @@ class Producer ( threading.Thread ):
                   song_picker1.start()
                   song_picker1.join()
           sleep(60)
-          
+
+   def purge_producer(self):
+       cursor.execute("DELETE from producer")
