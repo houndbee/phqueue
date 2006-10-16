@@ -1,6 +1,9 @@
 from string import *
 import sys
-from db import *
+import MySQLdb
+
+db = MySQLdb.connect(host="localhost", user="root", passwd="wtfc",db="tunequeue")
+cursor = db.cursor(MySQLdb.cursors.DictCursor)
 
 # This is just a skeleton, something for you to start with.
 
@@ -18,6 +21,15 @@ def ices_shutdown ():
 	print 'Executing shutdown() function...'
 	return 1
 
+def get_file_name(id):
+	cursor.execute("select fullpath from tunes where ID='%s'",id)
+	row = cursor.fetchone()
+	if row:
+		return row['fullpath']
+	else:
+		print 'Huge shit happened wtf...'
+		return '/usr/local/phwqueue/panic.mp3'
+
 # Function called to get the next filename to stream. 
 # Should return a string.
 def ices_get_next ():
@@ -28,22 +40,21 @@ def ices_get_next ():
 	if row:
                 cursor.execute("Update producer set curstatus=-1 where ID='%s'",row['ID'])
                 
-	cursor.execute("SELECT * FROM producer where curstatus = 1")
+	cursor.execute("SELECT * FROM producer where curstatus=1")
 	row1 = cursor.fetchone()
-	cursor.execute("Update producer set curstatus=0 where ID='%s'",row1['ID'])
-	file_name = get_file_name (row['ID'])
-	
-	return file_name
 
-def get_file_name(id):
-	cursor.execute("select full_path from tunes where ID='%s'",id)
-	row = cursor.fetchone()
-	if row:
-		return row['full_path']
+	if row1:
+		cursor.execute("Update producer set curstatus=0 where ID='%s'",row1['ID'])
+		file_name = get_file_name (row1['tuneid'])
+		print 'Playing next'
+		print file_name
+		return file_name
 	else:
-		print 'Huge shit happened wtf...'
+		print 'Playing next'
+		print '/usr/local/phwqueue/panic.mp3'
 		return '/usr/local/phwqueue/panic.mp3'
-	
+
+
 # This function, if defined, returns the string you'd like used
 # as metadata (ie for title streaming) for the current song. You may
 # return null to indicate that the file comment should be used.
