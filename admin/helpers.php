@@ -165,11 +165,22 @@ function insert_into_tunes($songname, $artistid, $fullpath, $album,$time,$showid
    return 1;
 }
 
+function remove_songs_of_show($showid)
+{
+ $sql = "delete from tunes where showid='$showid'";
+  if ( !mysql_query($sql) ) {
+    print mysql_error();
+  }
+  else
+    return 1;
+}
+
 function delete_shows($showid)
 {
  
  $sql = "delete from shows where ID='$showid'";
  remove_shows_from_master_table($showid);
+ remove_songs_of_show($showid);
   if ( !mysql_query($sql) ) {
     print mysql_error();
   }
