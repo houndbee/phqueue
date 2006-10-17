@@ -64,7 +64,7 @@ class SongPicker ( threading.Thread ):
         for row in result_set:
             starttime = row['starttime']
             showid = row['showid']
-            if self.show_ten_minutes(starttime):
+            if self.show_twenty_minutes(starttime):
                 print 'Show found'
                 print showid
                 return showid
@@ -72,12 +72,13 @@ class SongPicker ( threading.Thread ):
         return 0
 
 
-    def show_ten_minutes(self,starttime):
+    def show_twenty_minutes(self,starttime):
         now = time.localtime(time.time())
         hour =  now[3]
         minute =  now[4]
-        
-        new_hour = hour + (minute+10)/60
+        print 'Show within twenty minutes?'
+        print minute;
+        new_hour = hour + (minute+20)/60
         if new_hour == hour + 1:
             return 1
         return 0
@@ -94,14 +95,38 @@ class SongPicker ( threading.Thread ):
             cursor.execute("INSERT into producer (tuneid,showid,curstatus) values (%s,%s,%s)",(tuneid,showid,curstatus))
         return 1
 
+
+    def songtime(self,tuneid):
+        cursor.execute("Select time from tunes where ID=%s",tuneid)
+        row = cursor.fetchone()
+        if row:
+            return row['time']
+    
+    def current_queued_time(self):
+        cursor.execute("SELECT starttime FROM producer where curstatus=0")
+        row = cursor.fetchone()
+        now = datetime.now()
+        sec_queued = 0
+        if row:
+            time_left = now - row['starttime']
+            sec_queued = time_left.seconds
+            
+        cursor.execute("SELECT tuneid FROM producer where curstatus=1")
+        result_set = cursor.fetchall()
+        for row1 in result_set:
+            sec_queued = sec_queued + self.songtime(row1["tuneid"])
+
+        return sec_queued
+            
+
     def fill_time_lag(self):
         now = time.localtime(time.time())
         hour =  now[3]
         minute =  now[4]
 
-        num_min = 60 - minute
+        num_min = 60 - minute        
 	
-	num_sec = 60*num_min
+	num_sec = 60*num_min - self.current_queued_time()
         left_time = 0
 	i=0
 	print 'Filling time lag...'
@@ -113,9 +138,11 @@ class SongPicker ( threading.Thread ):
 		else:			
 	            left_time = left_time + self.pick_promo(num_sec - left_time)
                 i = i + 1
+                print '****'
                 print 'Time left is...'
-		print left_time - num_min
-
+		print num_sec-left_time
+                print '****'
+        
     def pick_song(self,max_time=10000):
         '''For now this is random, need to make this match tags'''
         # The maximum length of the song is assumed to be 100 because every song will be less than 100 minutes
@@ -128,7 +155,6 @@ class SongPicker ( threading.Thread ):
     
     def pick_random_tune(self,type,max_time):
         # Slower implementation, lets hope this works.
-	print max_time
         cursor.execute("SELECT * FROM `tunes` where showid=-1 and type=%s and time<%s ORDER BY RAND() LIMIT 0,1",(type,max_time));
         row1 = cursor.fetchone()
         if row1:
@@ -136,7 +162,7 @@ class SongPicker ( threading.Thread ):
             cursor.execute("INSERT into producer (tuneid,showid,curstatus) values (%s,%s,%s)",(row1['ID'],-1,1))
             cursor.execute ("update tunes set lastplayed=%s where ID=%s",(now,row1['ID']))
             print 'Song selected is...'
-            print row1["time"]
+            print row1["fullpath"],row1["time"]
             return row1["time"]
         else:
             print 'Fuck shit,we a need panic song and a mail that shreyas sucks at designing algorithms'
