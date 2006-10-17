@@ -1,7 +1,7 @@
 <?
 
 //Change this to suit actual paths
-require_once('/home/radiover/public_html/getid3/getid3/getid3.php');                          
+require_once('/path/to/getid3/getid3/getid3.php');                          
 
 function import_show($showid,$dir,$type)
 {
