@@ -4,6 +4,7 @@
 import threading
 import random
 import time
+import pdb
 from datetime import datetime
 from datetime import date
 from datetime import timedelta
@@ -78,7 +79,7 @@ class SongPicker ( threading.Thread ):
         minute =  now[4]
         print 'Show within twenty minutes?'
         print minute;
-        new_hour = hour + (minute+20)/60
+        new_hour = hour + (minute+30)/60
         if new_hour == hour + 1:
             return 1
         return 0
@@ -108,6 +109,7 @@ class SongPicker ( threading.Thread ):
         now = datetime.now()
         sec_queued = 0
         if row:
+            print 'Does this ever work...'
             time_left = now - row['starttime']
             sec_queued = time_left.seconds
             
@@ -127,6 +129,7 @@ class SongPicker ( threading.Thread ):
         num_min = 60 - minute        
 	
 	num_sec = 60*num_min - self.current_queued_time()
+        
         left_time = 0
 	i=0
 	print 'Filling time lag...'
@@ -162,7 +165,7 @@ class SongPicker ( threading.Thread ):
             cursor.execute("INSERT into producer (tuneid,showid,curstatus) values (%s,%s,%s)",(row1['ID'],-1,1))
             cursor.execute ("update tunes set lastplayed=%s where ID=%s",(now,row1['ID']))
             print 'Song selected is...'
-            print row1["fullpath"],row1["time"]
+            print row1["fullpath"],row1["time"],row1["ID"]
             return row1["time"]
         else:
             print 'Fuck shit,we a need panic song and a mail that shreyas sucks at designing algorithms'
