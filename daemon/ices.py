@@ -1,6 +1,7 @@
 from string import *
 import sys
 import MySQLdb
+from datetime import datetime
 
 db = MySQLdb.connect(host="localhost", user="root", passwd="wtfc",db="tunequeue")
 cursor = db.cursor(MySQLdb.cursors.DictCursor)
@@ -36,15 +37,18 @@ def ices_get_next ():
 	print 'Executing get_next() function...'
 	cursor.execute("SELECT * FROM producer where curstatus = 0")
 	row = cursor.fetchone()
+	now = datetime.now()
+	print now
 	
 	if row:
-                cursor.execute("Update producer set curstatus=-1 where ID='%s'",row['ID'])
+		print row
+                cursor.execute("Update producer set curstatus=-1 where ID=%s",row['ID'])
                 
 	cursor.execute("SELECT * FROM producer where curstatus=1")
 	row1 = cursor.fetchone()
 
 	if row1:
-		cursor.execute("Update producer set curstatus=0 where ID='%s'",row1['ID'])
+		cursor.execute("Update producer set curstatus=0,starttime=%s where ID=%s",(now,row1['ID']))
 		file_name = get_file_name (row1['tuneid'])
 		print 'Playing next'
 		print file_name
