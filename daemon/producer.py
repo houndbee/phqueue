@@ -104,14 +104,16 @@ class SongPicker ( threading.Thread ):
             return row['time']
     
     def current_queued_time(self):
-        cursor.execute("SELECT starttime FROM producer where curstatus=0")
+        cursor.execute("SELECT tuneid,starttime FROM producer where curstatus=0")
         row = cursor.fetchone()
         now = datetime.now()
         sec_queued = 0
         if row:
             print 'Does this ever work...'
             time_left = now - row['starttime']
-            sec_queued = time_left.seconds
+            sec_queued = self.songtime(row['tuneid']) - time_left.seconds
+            print time_left
+            print 'Sec queued is',sec_queued
             
         cursor.execute("SELECT tuneid FROM producer where curstatus=1")
         result_set = cursor.fetchall()
