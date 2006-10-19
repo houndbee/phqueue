@@ -29,7 +29,7 @@ def get_file_name(id):
 		return row['fullpath']
 	else:
 		print 'Huge shit happened wtf...'
-		return '/usr/local/phwqueue/panic.mp3'
+		return '/usr/local/phqueue/panic.mp3'
 
 # Function called to get the next filename to stream. 
 # Should return a string.
@@ -55,15 +55,15 @@ def ices_get_next ():
 		return file_name
 	else:
 		print 'Playing next'
-		print '/usr/local/phwqueue/panic.mp3'
-		return '/usr/local/phwqueue/panic.mp3'
+		print '/usr/local/phqueue/panic.mp3'
+		return '/usr/local/phqueue/panic.mp3'
 
 
 # This function, if defined, returns the string you'd like used
 # as metadata (ie for title streaming) for the current song. You may
 # return null to indicate that the file comment should be used.
-def ices_get_metadata ():
-        return 'Artist - Title (Label, Year)'
+#def ices_get_metadata ():
+#        return 'Artist - Title (Label, Year)'
 
 # Function used to put the current line number of
 # the playlist in the cue file. If you don't care about this number
